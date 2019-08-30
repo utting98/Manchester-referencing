@@ -4,7 +4,7 @@ Code to format inputs in to a Manchester Harvard Style reference list for use in
 Code requires install of docx and beautifulsoup via:
 
 pip install python-docx
-pip install beautifulsoup4
+pip install bs4
 
 For anyone unfamiliar, if using anaconda, search and open anaconda prompt then type the above code and hit enter to install packages.
 
