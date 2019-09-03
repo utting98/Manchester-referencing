@@ -176,8 +176,12 @@ def isbnsearch(isbnvar,authorvar,yearvar,titlevar,subtitlevar,editionvar,pubplac
                                 break #break loop to carry on
                             else:
                                 pass
-                        ending = suffix(int(edn)) #find a suffix for the edition based on the suffix function (e.g. th,nd,rd)
-                        edn = edn+ending+' edn' #store edition as the number plus suffic plus ' edn'
+                        try:
+                            ending = suffix(int(edn)) #find a suffix for the edition based on the suffix function (e.g. th,nd,rd)
+                            edn = edn+ending+' edn' #store edition as the number plus suffic plus ' edn'
+                        except:
+                            edn = '1st edn' #if edition still came back as illustrated replace it with 1st edition
+                        
                     except:
                         pass #if this check fails leave as the scraped value
                     pubandyear = metadatavalues[numauthors+2] #store variable publisher and published year as metadatavalues from the final author + 2
@@ -248,15 +252,35 @@ def isbnsearch(isbnvar,authorvar,yearvar,titlevar,subtitlevar,editionvar,pubplac
             pubplace = newplace[0] #store publisher location as city element
         except:
             pubplace = '' #if fails store publisher location as blank
-
-        titlevar.set(title) #set the title variable of entry form to the title string
-        yearvar.set(year) #set the year variable of entry form to the year string
-        authorvar.set(formattedauthor) #set the author variable of the entry form to the formattedauthor string
-        editionvar.set(edn) #set the edition variable of the entry field to the edn string
-        publishervar.set(publisher) #set the publisher variable of the entry field to the publisher string
-        subtitlevar.set(subtitle) #set the subtitle variable of the entry field to the subtitle string
-        pubplacevar.set(pubplace) #set the publisher location variable of the entry field to the pubplace string
-
+        
+        try:
+            titlevar.set(title) #set the title variable of entry form to the title string
+        except:
+            pass
+        try:
+            yearvar.set(year) #set the year variable of entry form to the year string
+        except:
+            pass
+        try:
+            authorvar.set(formattedauthor) #set the author variable of the entry form to the formattedauthor string
+        except:
+            pass
+        try:
+            editionvar.set(edn) #set the edition variable of the entry field to the edn string
+        except:
+            pass
+        try:
+            publishervar.set(publisher) #set the publisher variable of the entry field to the publisher string
+        except:
+            pass
+        try:
+            subtitlevar.set(subtitle) #set the subtitle variable of the entry field to the subtitle string
+        except:
+            pass
+        try:
+            pubplacevar.set(pubplace) #set the publisher location variable of the entry field to the pubplace string
+        except:
+            pass
     except: #if isbn search has failed
         isbnfail = Tk() #open a tkinter window
         #create text label informing search has failed and to try again, pack in window
