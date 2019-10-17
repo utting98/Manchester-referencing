@@ -319,6 +319,12 @@ def getchoice(*choices):
         illustrationwin()
     elif(reftypechoice=='E-Book'):
         ebookwin()
+    elif(reftypechoice=='Report From Organisation'):
+        organisationreportwin()
+    elif(reftypechoice=='Self-Citation'):
+        selfcitationwin()
+    elif(reftypechoice=='Government/Corporate Publications'):
+        govpubswin()
     
 #define the book genating reference function
 #these generation functions are called by the relevant sourcewin functions below, e.g. bookwin()
@@ -653,6 +659,90 @@ def ebookgen(authorstring,yearstring,titlestring,subtitlestring,editionstring,pr
     document.save('references.docx') #save the appending to references.docx
     success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=10,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
 
+def organisationreportgen(authorstring,yearstring,titlestring,pubplacestring,publisherstring,urlstring,accessstring,referenceframe):
+    global count
+    count=count+1 #add one to the count to increase the number in the reference list
+    #get the values of each of the inputs of the book window entry fields
+    author = authorstring.get()
+    year = yearstring.get()
+    title = titlestring.get()
+    pubplace = pubplacestring.get()
+    publisher = publisherstring.get()
+    url = urlstring.get()
+    access = accessstring.get()
+    
+    p = document.add_paragraph("[%s] " % count) #add a new paragraph to document starting with count value e.g reference [3]
+    p.style = document.styles['Normal'] #write paragraph in previously defined font style
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY #justify aligning of paragraph as per required for UoM reports
+    p.add_run("%s (%s). " % (author,year)) #add the title and year in brackets to the reference
+    p.add_run(title).italic = True #add the title to the paragraph in italics
+    if(publisher!=''):
+        p.add_run('. %s: %s.' % (pubplace,publisher))
+    else:
+        p.add_run('. Available At: %s (Accessed: %s).' % (url,access))
+    document.save('references.docx') #save the appending to references.docx
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=8,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
+    
+def selfcitationgen(authorstring,yearstring,titlestring,modulecodestring,moduletitlestring,institutionstring,referenceframe):
+    global count
+    count=count+1 #add one to the count to increase the number in the reference list
+    #get the values of each of the inputs of the book window entry fields
+    author = authorstring.get()
+    year = yearstring.get()
+    title = titlestring.get()
+    modulecode = modulecodestring.get()
+    moduletitle = moduletitlestring.get()
+    institution = institutionstring.get()
+    
+    p = document.add_paragraph("[%s] " % count) #add a new paragraph to document starting with count value e.g reference [3]
+    p.style = document.styles['Normal'] #write paragraph in previously defined font style
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY #justify aligning of paragraph as per required for UoM reports
+    p.add_run("%s (%s). '" % (author,year)) #add the title and year in brackets to the reference
+    p.add_run(title).italic = True #add the title to the paragraph in italics
+    p.add_run("'. %s: " % modulecode)
+    p.add_run(moduletitle).italic = True
+    p.add_run(', %s. Unpublished assignment.' % institution)
+    document.save('references.docx') #save the appending to references.docx
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=7,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
+
+def govpubsgen(authorstring,yearstring,titlestring,subtitlestring,pubplacestring,publisherstring,seriesstring,urlstring,accessstring,referenceframe):
+    global count
+    count=count+1 #add one to the count to increase the number in the reference list
+    #get the values of each of the inputs of the book window entry fields
+    author = authorstring.get()
+    year = yearstring.get()
+    title = titlestring.get()
+    subtitle = subtitlestring.get()
+    pubplace = pubplacestring.get()
+    publisher = publisherstring.get()
+    series = seriesstring.get()
+    url = urlstring.get()
+    access = accessstring.get()
+    
+    if(subtitle!=''): #check if there has been an entry in the subtitle window, if so:
+        newsubtitlestring = subtitle + '.' #add full stop to the end of subtitle
+        subtitle = newsubtitlestring #overwrite subtitle
+        newtitlestring = title + ': ' #add colon to the end of title
+        title = newtitlestring+subtitle #new title is in format title: subtitle.
+    else:
+        newtitlestring = title + '.' #if subtitle is empty add full stop to the end of title 
+        title = newtitlestring #new title is in format title.
+    
+    p = document.add_paragraph("[%s] " % count) #add a new paragraph to document starting with count value e.g reference [3]
+    p.style = document.styles['Normal'] #write paragraph in previously defined font style
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY #justify aligning of paragraph as per required for UoM reports
+    p.add_run("%s (%s). " % (author,year)) #add the title and year in brackets to the reference
+    p.add_run(title).italic = True #add the title to the paragraph in italics
+    if(series!=''):
+        p.add_run(' %s: %s. (%s).' % (pubplace,publisher,series))
+    else:
+        p.add_run(' %s: %s.' % (pubplace,publisher))
+    if(url!=''):
+        p.add_run(' Available at: %s (Accessed: %s).' % (url,access))
+    else:
+        pass
+    document.save('references.docx') #save the appending to references.docx
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=10,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
 
 #define bookwindow for reference inputs, called when book source is chosen to overwrite the display
 def bookwin():
@@ -1215,6 +1305,133 @@ def ebookwin():
     root.update() #used instead of root.mmainloop() to allow for changes using the clear command, updates the window on each loop rather than just loops with the original layout
     return #code should not make it this far but left in for any breakages to try and return to previous function    
 
+def organisationreportwin():
+    global root, homeframe
+    homeframe.destroy() 
+    referenceframe = Frame(root) 
+    referenceframe.pack() 
+    
+    infolabel = Label(referenceframe,text='Enter information for reference. Enter inputs as shown, case and punctuation sensitive.').grid(row=0,column=0,columnspan=2)
+    
+    authorlabel = Label(referenceframe,text='Organisation (e.g. British Programming Council)').grid(row=1,column=0)
+    authorstring = StringVar()
+    authorentry = Entry(referenceframe,textvariable=authorstring).grid(row=1,column=1)
+    
+    yearlabel = Label(referenceframe,text='Publication Year (e.g. 2019)').grid(row=2,column=0)
+    yearstring = StringVar()
+    yearstringentry = Entry(referenceframe,textvariable=yearstring).grid(row=2,column=1)
+    
+    titlelabel = Label(referenceframe,text='Title Of Report (e.g. Beginner programming)').grid(row=3,column=0)
+    titlestring = StringVar()
+    titleentry = Entry(referenceframe,textvariable=titlestring).grid(row=3,column=1)
+    
+    pubplacelabel = Label(referenceframe,text='Place Of Publication (If published else leave blank, e.g. Manchester)').grid(row=4,column=0)
+    pubplacestring = StringVar()
+    pubplaceentry = Entry(referenceframe,textvariable=pubplacestring).grid(row=4,column=1)
+    
+    publisherlabel = Label(referenceframe,text='Publisher Name (If published else leave blank, e.g. Pearson)').grid(row=5,column=0)
+    publisherstring = StringVar()
+    publisherentry = Entry(referenceframe,textvariable=publisherstring).grid(row=5,column=1)
+    
+    urllabel = Label(referenceframe,text='URL (If on website else leave blank, e.g. www.google.co.uk)').grid(row=6,column=0)
+    urlstring = StringVar()
+    urlentry = Entry(referenceframe,textvariable=urlstring).grid(row=6,column=1)
+    
+    accesslabel = Label(referenceframe,text='Access Date (If on website else leave blank, e.g. 20th April 2019)').grid(row=7,column=0)
+    accessstring = StringVar()
+    accessentry = Entry(referenceframe,textvariable=accessstring).grid(row=7,column=1)
+    
+    genrefbutton = Button(referenceframe,text='Generate Reference',command=lambda: organisationreportgen(authorstring,yearstring,titlestring,pubplacestring,publisherstring,urlstring,accessstring,referenceframe)).grid(row=9,column=1)
+    homebutton = Button(referenceframe,text='Home',command=lambda: home(referenceframe)).grid(row=9,column=0)
+    clearbutton = Button(referenceframe,text='Clear',command=lambda: clear(referenceframe,organisationreportwin)).grid(row=4,column=2)
+    
+    root.update() #used instead of root.mmainloop() to allow for changes using the clear command, updates the window on each loop rather than just loops with the original layout
+    return #code should not make it this far but left in for any breakages to try and return to previous function   
+
+def selfcitationwin():
+    global root, homeframe
+    homeframe.destroy() 
+    referenceframe = Frame(root) 
+    referenceframe.pack() 
+    
+    infolabel = Label(referenceframe,text='Enter information for reference. Enter inputs as shown, case and punctuation sensitive.').grid(row=0,column=0,columnspan=2)
+    
+    authorlabel = Label(referenceframe,text='Student Name (e.g. Utting, Joshua)').grid(row=1,column=0)
+    authorstring = StringVar()
+    authorentry = Entry(referenceframe,textvariable=authorstring).grid(row=1,column=1)
+    
+    yearlabel = Label(referenceframe,text='Submission Year (e.g. 2019)').grid(row=2,column=0)
+    yearstring = StringVar()
+    yearstringentry = Entry(referenceframe,textvariable=yearstring).grid(row=2,column=1)
+    
+    titlelabel = Label(referenceframe,text='Title Of Essay/Assignment (e.g. Beginner programming)').grid(row=3,column=0)
+    titlestring = StringVar()
+    titleentry = Entry(referenceframe,textvariable=titlestring).grid(row=3,column=1)
+
+    modulecodelabel = Label(referenceframe,text='Module Code (e.g. PHYS10101)').grid(row=4,column=0)
+    modulecodestring = StringVar()
+    modulecodeentry = Entry(referenceframe,textvariable=modulecodestring).grid(row=4,column=1)
+
+    moduletitlelabel = Label(referenceframe,text='Module Title (e.g. Introduction to Programming)').grid(row=5,column=0)
+    moduletitlestring = StringVar()
+    moduletitleentry = Entry(referenceframe,textvariable=moduletitlestring).grid(row=5,column=1)
+    
+    institutionlabel = Label(referenceframe,text='Institution (e.g. University of Manchester)').grid(row=6,column=0)
+    institutionstring = StringVar()
+    institutionentry = Entry(referenceframe,textvariable=institutionstring).grid(row=6,column=1)
+    
+    genrefbutton = Button(referenceframe,text='Generate Reference',command=lambda: selfcitationgen(authorstring,yearstring,titlestring,modulecodestring,moduletitlestring,institutionstring,referenceframe)).grid(row=8,column=1)
+    homebutton = Button(referenceframe,text='Home',command=lambda: home(referenceframe)).grid(row=8,column=0)
+    clearbutton = Button(referenceframe,text='Clear',command=lambda: clear(referenceframe,selfcitationwin)).grid(row=3,column=2)
+
+def govpubswin():
+    global root, homeframe
+    homeframe.destroy() 
+    referenceframe = Frame(root) 
+    referenceframe.pack() 
+    
+    infolabel = Label(referenceframe,text='Enter information for reference. Enter inputs as shown, case and punctuation sensitive.').grid(row=0,column=0,columnspan=2)
+    
+    authorlabel = Label(referenceframe,text='Department Name (e.g. Department of Technology)').grid(row=1,column=0)
+    authorstring = StringVar()
+    authorentry = Entry(referenceframe,textvariable=authorstring).grid(row=1,column=1)
+    
+    yearlabel = Label(referenceframe,text='Publication Year (e.g. 2019)').grid(row=2,column=0)
+    yearstring = StringVar()
+    yearstringentry = Entry(referenceframe,textvariable=yearstring).grid(row=2,column=1)
+    
+    titlelabel = Label(referenceframe,text='Title Of Publication (e.g. Beginner programming guidelines)').grid(row=3,column=0)
+    titlestring = StringVar()
+    titleentry = Entry(referenceframe,textvariable=titlestring).grid(row=3,column=1)
+    
+    subtitlelabel = Label(referenceframe,text='Subtitle (If none leave blank, e.g. testing)').grid(row=4,column=0)
+    subtitlestring = StringVar()
+    subtitleentry = Entry(referenceframe,textvariable=subtitlestring).grid(row=4,column=1)
+    
+    pubplacelabel = Label(referenceframe,text='Place Of Publication (e.g. Manchester)').grid(row=5,column=0)
+    pubplacestring = StringVar()
+    pubplaceentry = Entry(referenceframe,textvariable=pubplacestring).grid(row=5,column=1)
+    
+    publisherlabel = Label(referenceframe,text='Publisher Name (e.g. Pearson)').grid(row=6,column=0)
+    publisherstring = StringVar()
+    publisherentry = Entry(referenceframe,textvariable=publisherstring).grid(row=6,column=1)
+    
+    serieslabel = Label(referenceframe,text='Series (If none leave blank e.g. No. 959)').grid(row=7,column=0)
+    seriesstring = StringVar()
+    seriesentry = Entry(referenceframe,textvariable=seriesstring).grid(row=7,column=1)
+    
+    urllabel = Label(referenceframe,text='URL (If on website else leave blank, e.g. www.google.co.uk)').grid(row=8,column=0)
+    urlstring = StringVar()
+    urlentry = Entry(referenceframe,textvariable=urlstring).grid(row=8,column=1)
+    
+    accesslabel = Label(referenceframe,text='Access Date (If on website else leave blank, e.g. 20th April 2019)').grid(row=9,column=0)
+    accessstring = StringVar()
+    accessentry = Entry(referenceframe,textvariable=accessstring).grid(row=9,column=1)
+    
+    genrefbutton = Button(referenceframe,text='Generate Reference',command=lambda: govpubsgen(authorstring,yearstring,titlestring,subtitlestring,pubplacestring,publisherstring,seriesstring,urlstring,accessstring,referenceframe)).grid(row=11,column=1)
+    homebutton = Button(referenceframe,text='Home',command=lambda: home(referenceframe)).grid(row=11,column=0)
+    clearbutton = Button(referenceframe,text='Clear',command=lambda: clear(referenceframe,govpubswin)).grid(row=4,column=2)
+
 #define quitwindow function to be called by quit buttons
 def quitwindow():
     global root #make access to root global
@@ -1239,7 +1456,7 @@ def main():
     homeframe.pack() #pack the frame in the root window
     
     reftypevar=StringVar() #define reference type variable as string
-    choices = ['Book','Chapter From Edited Book','E-Book','Edited Book','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Software','Thesis','Website'] #define drop down menu choices for sources
+    choices = ['Book','Chapter From Edited Book','E-Book','Edited Book','Government/Corporate Publications','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Report From Organisation','Self-Citation','Software','Thesis','Website'] #define drop down menu choices for sources
     reftypevar.set('Book') #set default value to book
     
     droplabel = Label(homeframe,text='Choose Source').grid(row=0,column=0) #define label for drop menu and pack it to the first row and first column
