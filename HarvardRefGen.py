@@ -33,7 +33,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from bs4 import BeautifulSoup
 import requests
 import numpy as np
-
+from PIL import Image,ImageTk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
 try: #attempt to open a file called references.docx
     document = Document('references.docx')
@@ -325,6 +327,8 @@ def getchoice(*choices):
         selfcitationwin()
     elif(reftypechoice=='Government/Corporate Publications'):
         govpubswin()
+    elif(reftypechoice=='Custom'):
+        customwin()
     
 #define the book genating reference function
 #these generation functions are called by the relevant sourcewin functions below, e.g. bookwin()
@@ -1432,6 +1436,244 @@ def govpubswin():
     homebutton = Button(referenceframe,text='Home',command=lambda: home(referenceframe)).grid(row=11,column=0)
     clearbutton = Button(referenceframe,text='Clear',command=lambda: clear(referenceframe,govpubswin)).grid(row=4,column=2)
 
+def customhelp():
+    helpwin = Tk()
+    helpwin.title('Help')
+    helpwin.attributes("-topmost", True) 
+    infolabel1 = Label(helpwin,text='This mode is used for creating your own reference style if it is non standard or just not included so far.').grid(row=0,column=0)
+    infolabel2 = Label(helpwin,text='For each element to add there is four options, punctuation is for the punctuation following or around that element. If it is a single piece it will follow the element and format e.g. string. for the full stop option.\nIf there are two pieces or more it will place one before and one after the element and format e.g. (string). for the brackets and full stop option.').grid(row=1,column=0)
+    infolabel3 = Label(helpwin,text='Click add element for as many elements are required and type the information such as author in the entry field. Choose the appropriate punctuation to run on.').grid(row=2,column=0)
+    infolabel4 = Label(helpwin,text='There are two checkboxes on each element, one for italics and one for bold, check these if the appropriate formatting is required for the element and choose both if both are required.').grid(row=3,column=0)
+    infolabel4 = Label(helpwin,text='An example of how to sue this function can be seen below, this combination of inputs will create the same as the book generation function to help you understand how this works :').grid(row=4,column=0)
+    
+    image = Image.open('CustomExample.png')
+    f = Figure(figsize=(13,6))
+    a = f.add_subplot(111)
+    a.imshow(image)
+    a.axis('off')
+    canvas = FigureCanvasTkAgg(f,master=helpwin)
+    canvas.get_tk_widget().grid(row=5,column=0)
+    canvas._tkcanvas.grid(row=5,column=0)
+    
+    helpwin.mainloop()
+
+def customgen(puncvars,stringvariables,italvars,boldvars,frame):
+    global count
+    count+=1
+    for i in reversed(range(0,len(stringvariables))):
+        if(stringvariables[i].get()==''):
+            stringvariables.pop(i)
+        else:
+            stringvariables[i] = stringvariables[i].get()
+    print(stringvariables)
+    totalfield = []
+    for i in range(0,len(stringvariables)):
+        puncvar = puncvars[i].get()
+        italvar = italvars[i].get()
+        boldvar = boldvars[i].get()
+        totalfield.append([puncvar,stringvariables[i],italvar,boldvar])
+        print(totalfield[i])
+    
+    p = document.add_paragraph("[%s] " % count) #add a new paragraph to document starting with count value e.g reference [3]
+    p.style = document.styles['Normal'] #write paragraph in previously defined font style
+    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY #justify aligning of paragraph as per required for UoM reports
+    for i in range(0,len(totalfield)):
+        if(totalfield[i][0]=='.'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('%s. ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('%s. ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('%s. ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('%s. ' % totalfield[i][1])
+        elif(totalfield[i][0]==','):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('%s, ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('%s, ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('%s, ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('%s, ' % totalfield[i][1])
+        elif(totalfield[i][0]=='( )'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('(%s) ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('(%s) ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('(%s) ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('(%s) ' % totalfield[i][1])
+        elif(totalfield[i][0]=='( ).'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('(%s). ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('(%s). ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('(%s). ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('(%s). ' % totalfield[i][1])
+        elif(totalfield[i][0]=='( ),'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('(%s), ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('(%s), ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('(%s), ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('(%s), ' % totalfield[i][1])
+        elif(totalfield[i][0]==':'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('%s: ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            if(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('%s: ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('%s: ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('%s: ' % totalfield[i][1])
+        elif(totalfield[i][0]=="' '"):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run("'%s' " % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run("'%s' " % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run("'%s' " % totalfield[i][1]).bold = True
+            else:
+                p.add_run("'%s' " % totalfield[i][1])
+        elif(totalfield[i][0]=="' '."):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run("'%s'. " % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run("'%s'. " % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run("'%s'. " % totalfield[i][1]).bold = True
+            else:
+                p.add_run("'%s'. " % totalfield[i][1])
+        elif(totalfield[i][0]=="' ',"):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run("'%s', " % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run("'%s', " % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run("'%s', " % totalfield[i][1]).bold = True
+            else:
+                p.add_run("'%s', " % totalfield[i][1])
+        elif(totalfield[i][0]=='" "'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('"%s" ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('"%s" ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('"%s" ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('"%s" ' % totalfield[i][1])
+        elif(totalfield[i][0]=='" ",'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('"%s", ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('"%s", ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('"%s", ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('"%s", ' % totalfield[i][1])
+        elif(totalfield[i][0]=='" ".'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('"%s". ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('"%s". ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('"%s". ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('"%s". ' % totalfield[i][1])
+        elif(totalfield[i][0]=='None'):
+            if(totalfield[i][2]==1 and totalfield[i][3]==1):
+                runner = p.add_run('%s ' % totalfield[i][1])
+                runner.bold=True
+                runner.italic=True
+            elif(totalfield[i][2]==1 and totalfield[i][3]!=1):
+                p.add_run('%s ' % totalfield[i][1]).italic = True
+            elif(totalfield[i][3]==1 and totalfield[i][2]!=1):
+                p.add_run('%s ' % totalfield[i][1]).bold = True
+            else:
+                p.add_run('%s ' % totalfield[i][1])
+    document.save('references.docx') #save the appending to references.docx
+    success = Label(frame,text=('Reference [%s] Successfully Generated' % count)).grid(row=23,column=0,columnspan=4) #create a label at the bottom of the window informing reference [number] added successfully
+    return
+
+def addelement(frame,puncvariables,stringvariables,italints,boldints):
+    global elementscount
+    if(elementscount<22):
+        puncchoices = ['.',',','( )','( ).','( ),',':',"' '","' '.","' ',",'" "','" ",','" ".','None']
+        puncmenu = OptionMenu(frame,puncvariables[(elementscount-2)],*puncchoices)
+        puncmenu.config(relief='solid')
+        puncmenu["highlightthickness"]=0
+        puncmenu.grid(row=elementscount,column=0,sticky='nsew')
+        newentry = Entry(frame,textvariable=stringvariables[(elementscount-2)],relief='solid').grid(row=elementscount,column=1,sticky='nsew')
+        italicbutton = Checkbutton(frame,variable=italints[(elementscount-2)],relief='solid').grid(row=elementscount,column=2,sticky='nsew')
+        boldbutton = Checkbutton(frame,variable=boldints[(elementscount-2)],relief='solid').grid(row=elementscount,column=3,sticky='nsew')
+        elementscount+=1
+    else:
+        label = Label(frame,text='Sorry you can only use up to 20 elements in custom mode.',relief='solid').grid(row=elementscount,column=0,columnspan=4,sticky='nsew')
+    return
+
+def customwin():
+    global root, homeframe, elementscount
+    homeframe.destroy() 
+    referenceframe = Frame(root) 
+    referenceframe.pack() 
+    varslist = []
+    punclist = []
+    itallist = []
+    boldlist = []
+    
+    for i in range(0,20):
+        textvar = StringVar()
+        varslist.append(textvar)
+        puncvar = StringVar()
+        puncvar.set('.')
+        punclist.append(puncvar)
+        italicvar = IntVar()
+        itallist.append(italicvar)
+        boldvar = IntVar()
+        boldlist.append(boldvar)
+         
+    infolabel = Label(referenceframe,text='This mode is for advanced users only, use it to build your own reference type if your source does not match an existing listed one.\nCheck with library services what elements you need to build your own.').grid(row=0,column=0,columnspan=4)
+    punclabel = Label(referenceframe,text='Punctuation:',relief='solid').grid(row=1,column=0,sticky='nsew')
+    elementlabel = Label(referenceframe,text='Element Entry:',relief='solid').grid(row=1,column=1,sticky='nsew')
+    italiclabel = Label(referenceframe,text='Italicised?',relief='solid').grid(row=1,column=2,sticky='nsew')
+    boldlabel = Label(referenceframe,text='Bold?',relief='solid').grid(row=1,column=3,sticky='nsew')
+    addfieldbutton = Button(referenceframe,text='Add Element',command=lambda: addelement(referenceframe,punclist,varslist,itallist,boldlist)).grid(row=24,column=0,sticky='nsew')
+    genrefbutton = Button(referenceframe,text='Generate Reference',command=lambda: customgen(punclist,varslist,itallist,boldlist,referenceframe)).grid(row=24,column=1,sticky='nsew')
+    helpbutton = Button(referenceframe,text='Help',command=customhelp).grid(row=24,column=2,sticky='nsew')
+    homebutton = Button(referenceframe,text='Home',command=lambda: home(referenceframe)).grid(row=24,column=3,sticky='nsew')
+    addelement(referenceframe,punclist,varslist,itallist,boldlist)
+    root.update()    
+   
 #define quitwindow function to be called by quit buttons
 def quitwindow():
     global root #make access to root global
@@ -1456,7 +1698,7 @@ def main():
     homeframe.pack() #pack the frame in the root window
     
     reftypevar=StringVar() #define reference type variable as string
-    choices = ['Book','Chapter From Edited Book','E-Book','Edited Book','Government/Corporate Publications','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Report From Organisation','Self-Citation','Software','Thesis','Website'] #define drop down menu choices for sources
+    choices = ['Book','Chapter From Edited Book','E-Book','Edited Book','Government/Corporate Publications','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Report From Organisation','Self-Citation','Software','Thesis','Website''---------------------------------------','Custom'] #define drop down menu choices for sources
     reftypevar.set('Book') #set default value to book
     
     droplabel = Label(homeframe,text='Choose Source').grid(row=0,column=0) #define label for drop menu and pack it to the first row and first column
