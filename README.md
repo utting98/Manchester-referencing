@@ -1,7 +1,7 @@
 # Manchester-referencing
 Code to format inputs in to a Manchester Harvard Style reference list for use in UoM student reports.
 
-Current source types software can generate: 'Book','Chapter From Edited Book','E-Book','Edited Book','Government/Corporate Publications','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Report From Organisation','Self-Citation','Software','Thesis','Website'
+Current source types software can generate: 'Book','Chapter From Edited Book','E-Book','Edited Book','Government/Corporate Publications','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Report From Organisation','Self-Citation','Software','Thesis','Website','Custom'
 
 Code requires install of docx and beautifulsoup via:
 
