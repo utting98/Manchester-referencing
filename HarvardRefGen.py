@@ -1681,6 +1681,8 @@ def quitwindow():
 
 #define home function to be called by home buttons
 def home(frame):
+    global elementscount
+    elementscount=2
     frame.destroy() #destroy imported frame, in this case the referenceframe of the previously chosen reference
     main() #call main again to show source selector
 
@@ -1698,7 +1700,7 @@ def main():
     homeframe.pack() #pack the frame in the root window
     
     reftypevar=StringVar() #define reference type variable as string
-    choices = ['Book','Chapter From Edited Book','E-Book','Edited Book','Government/Corporate Publications','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Report From Organisation','Self-Citation','Software','Thesis','Website''---------------------------------------','Custom'] #define drop down menu choices for sources
+    choices = ['Book','Chapter From Edited Book','E-Book','Edited Book','Government/Corporate Publications','Illustration','Journal (electronic)','Journal (printed)','Lecturer Handout','Presentation','Report From Organisation','Self-Citation','Software','Thesis','Website','---------------------------------------','Custom'] #define drop down menu choices for sources
     reftypevar.set('Book') #set default value to book
     
     droplabel = Label(homeframe,text='Choose Source').grid(row=0,column=0) #define label for drop menu and pack it to the first row and first column
@@ -1714,5 +1716,6 @@ if(__name__=='__main__'):
     root = Tk() #define root as a tkinter window
     root.title('Manchester Harvard Reference Generator') #give the window this title string
     root.state('zoomed')
+    elementscount=2
     main() #cal the main function
         
