@@ -290,13 +290,134 @@ def isbnsearch(isbnvar,authorvar,yearvar,titlevar,subtitlevar,editionvar,pubplac
         okbutton = Button(isbnfail,text='Ok',command=lambda: isbnfail.destroy()).pack() #create ok button to close window and pack in window
         isbnfail.mainloop() #keep window displaying
 
+def searchreferences(referenceframe,searchterms):
+    global archivevar
+    searchtermvals = searchterms.get()
+    words = searchtermvals.split(' ')
+    file = open('archivedreferences.csv','r')
+    
+    lines = []
+    for line in file:
+        splitup = line.split(',',1)
+        lines.append([splitup[0],splitup[1]])
 
+    file.close()
+
+    score = [0]*len(lines)
+    for i in range(0,len(lines)):
+        lines[i][0] = lines[i][0].split(',',1)
+        for j in range(0,len(words)):
+            if(words[j] in lines[i][1]):
+                score[i]+=1
+            else:
+                pass
+    
+    matches = []
+    for i in range(0,len(score)):
+        if(score[i]>0):
+            matches.append([score[i],lines[i][0],lines[i][1]])
+    
+    if(matches!=[]):
+        sortedlist =  sorted(matches,key=lambda x: x[0])
+    else:
+        if(referenceframe.grid_slaves(row=3,column=0)!=[]):
+            referenceframe.grid_slaves(row=3,column=0)[0].grid_forget()
+        else:
+            pass
+        if(referenceframe.grid_slaves(row=2,column=2)!=[]):
+            referenceframe.grid_slaves(row=2,column=2)[0].grid_forget()
+        else:
+            pass
+        if(referenceframe.grid_slaves(row=2,column=1)!=[]):
+            referenceframe.grid_slaves(row=2,column=1)[0].grid_forget()
+        else:
+            pass
+        if(referenceframe.grid_slaves(row=2,column=0)!=[]):
+            referenceframe.grid_slaves(row=2,column=0)[0].grid_forget()
+        else:
+            pass
         
+        failedlabel = Label(referenceframe,text='No Results Found').grid(row=2,column=1)
+        return
+    
+
+    for sublist in sortedlist:
+        del sublist[0]
+
+    for i in range(0,len(sortedlist)):
+        try:
+            sortedlist[i] = [sortedlist[i][0][0],sortedlist[i][1]]
+        except:
+            pass
+
+            
+    if(referenceframe.grid_slaves(row=3,column=0)!=[]):
+        referenceframe.grid_slaves(row=3,column=0)[0].grid_forget()
+    else:
+        pass
+    if(referenceframe.grid_slaves(row=2,column=2)!=[]):
+        referenceframe.grid_slaves(row=2,column=2)[0].grid_forget()
+    else:
+        pass
+    if(referenceframe.grid_slaves(row=2,column=1)!=[]):
+        referenceframe.grid_slaves(row=2,column=1)[0].grid_forget()
+    else:
+        pass
+    if(referenceframe.grid_slaves(row=2,column=0)!=[]):
+        referenceframe.grid_slaves(row=2,column=0)[0].grid_forget()
+    else:
+        pass
+    
+    choices = sortedlist
+    archivevar = StringVar()
+    archivevar.set(choices[0])
+    droplabel = Label(referenceframe,text='Results: ').grid(row=2,column=0) #define label for drop menu and pack it to the first row and first column
+    dropmenu = OptionMenu(referenceframe,archivevar,*choices)
+    dropmenu.grid(row=2,column=1) #define drop down menu with the previously defined choices and pack to first row and second column
+    dropmenu.config(wraplength=500)
+    choiceconfirmbutton = Button(referenceframe,text='Confirm',command=lambda: genfromarchive(referenceframe)).grid(row=2,column=2)
+
+def genfromarchive(referenceframe):
+    global count, archivevar
+    count+=1
+    archivevarget = archivevar.get()
+    archivedargs = archivevarget.strip(')')
+    archivedargs = archivedargs.strip('(')
+    
+    splitup = archivedargs.split(',',1)
+    splitup = splitup[1].rstrip()
+    referencestring = str(splitup[2:-3])
+    
+    if('*' in referencestring):
+        referencestring = referencestring.split('*')
+        p = document.add_paragraph("[%s] " % count) #add a new paragraph to document starting with count value e.g reference [3]
+        p.style = document.styles['Normal'] #write paragraph in previously defined font style
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        for i in range(0,len(referencestring)):
+            if(i%2==0):
+                p.add_run(referencestring[i])
+            else:
+                p.add_run(referencestring[i]).italic = True
+
+        document.save('references.docx')
+    
+    else:
+        p = document.add_paragraph("[%s] " % count) #add a new paragraph to document starting with count value e.g reference [3]
+        p.style = document.styles['Normal'] #write paragraph in previously defined font style
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.add_run(referencestring)
+        document.save('references.docx')
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=3,column=0,columnspan=3) #create a label at the bottom of the window informing reference [number] added successfully
+
     
 #define function to get the choice from the drop down and call the appropriate reference window
 def getchoice(*choices):
-    global reftpyechoice, reftypevar, count
+    global reftpyechoice, reftypevar, count, searchframe
+    
     reftypechoice = reftypevar.get() #get the value of the drop down
+    searchframe.destroy()
+        
     if(reftypechoice=='Book'): #if the value is book etc.
         bookwin() #call the bookwindow function to show the entry fields for a book etc
     elif(reftypechoice=='Website'):
@@ -360,8 +481,18 @@ def bookgen(authorstring,yearstring,titlestring,subtitlestring,editionstring,pub
     p.add_run(title).italic = True #add the title to the paragraph in italics
     p.add_run(" %s. %s: %s." % (edition,pubplace,publisher)) #add the edition. publishier location: publisher name. to the paragraph
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=9,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Book,%s (%s). *%s* %s. %s: %s.\n" % (author,year,title,edition,pubplace,publisher)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=9,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
+    
 
+    
+    
+    
 #define the web reference generating function
 #works as bookgen but all formatting matches that required for websites
 def webgen(authorstring,yearstring,titlestring,urlstring,accessstring,referenceframe):
@@ -380,7 +511,13 @@ def webgen(authorstring,yearstring,titlestring,urlstring,accessstring,referencef
     p.add_run(title).italic = True
     p.add_run(". Available at: %s, (Accessed: %s)." % (url,access))
     document.save('references.docx')
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=8,column=0,columnspan=2)
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Website,%s (%s). *%s*. Available at: %s, (Accessed: %s).\n" % (author,year,title,url,access)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=8,column=0,columnspan=2)
     
 #define the printed journal reference generating function
 #works as bookgen but all formatting matches that required for printed journals
@@ -402,7 +539,13 @@ def journal1gen(authorstring,yearstring,titlearticlestring,titlestring,volumestr
     p.add_run(title).italic = True
     p.add_run(", %s(%s), pp. %s." % (volume,issue,page))
     document.save('references.docx')
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=8,column=0,columnspan=2)
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Printed Journal,%s (%s). ‘%s’, *%s*, %s(%s), pp. %s.\n" % (author,year,titlearticle,title,volume,issue,page)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=8,column=0,columnspan=2)
 
 #define the electronic journal reference generating function
 #works as bookgen but all formatting matches that required for electronic journals
@@ -426,7 +569,13 @@ def journal2gen(authorstring,yearstring,titlearticlestring,titlestring,volumestr
     p.add_run(title).italic = True
     p.add_run(", %s(%s), pp. %s. [Online]. Available at: %s (Accessed: %s)." % (volume,issue,page,url,access))
     document.save('references.docx')
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=10,column=0,columnspan=2)
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Electronic Journal,%s (%s). ‘%s’, *%s*, %s(%s), pp. %s. [Online]. Available at: %s (Accessed: %s).\n" % (author,year,titlearticle,title,volume,issue,page,url,access)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=10,column=0,columnspan=2)
 
 #define the lecturer handout reference generating function
 #works as bookgen but all formatting matches that required for lecturer handouts
@@ -449,7 +598,13 @@ def lechandoutgen(authorstring,yearstring,titlestring,codestring,modtitlestring,
     p.add_run(unitname).italic = True
     p.add_run(". %s. Unpublished." % (institution))
     document.save('references.docx')
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=7,column=0,columnspan=2)
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Lecturer Handout,%s (%s). ‘%s’, *%s*. %s. Unpublished.\n" % (author,year,title,unitname,institution)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=7,column=0,columnspan=2)
 
 #define the thesis reference generating function
 #works as bookgen but all formatting matches that required for theses
@@ -469,7 +624,13 @@ def thesisgen(authorstring,yearstring,titlestring,levelstring,institutionstring,
     p.add_run(title).italic = True
     p.add_run(". %s. %s." % (level,institution))
     document.save('references.docx')
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=6,column=0,columnspan=2)
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Thesis,%s (%s). *%s*. %s. %s.\n" % (author,year,title,level,institution)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=6,column=0,columnspan=2)
 
 #define the presentation reference generating function
 #works as bookgen but all formatting matches that required for presentations
@@ -493,7 +654,13 @@ def presentgen(authorstring,yearstring,titlestring,codestring,modtitlestring,url
     p.add_run("%s: %s" % (code,modtitle)).italic = True
     p.add_run(". Available at: %s (Accessed: %s)." % (url,access))
     document.save('references.docx')
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=8,column=0,columnspan=2)    
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Presentation,%s (%s). *%s*. [presentation]. *%s: %s*. Available at: %s (Accessed: %s).\n" % (author,year,title,code,modtitle,url,access)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=8,column=0,columnspan=2)    
 
 #define the edited book reference generating function
 #works as bookgen but all formatting matches that required for edited books
@@ -532,7 +699,13 @@ def editbookchaptergen(authorstring,yearstring,chapterstring,editorstring,titles
     p.add_run(title).italic = True #add the title to the paragraph in italics
     p.add_run(" %s: %s, pp %s." % (pubplace,publisher,pages)) #add the edition. publishier location: publisher name. to the paragraph
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=11,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Chapter From An Edited Book,%s (%s). '%s', in %s (%s.) *%s* %s: %s, pp %s.\n" % (author,year,chapter,editor,edoreds,title,pubplace,publisher,pages)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=11,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
 
 def editedbookgen(authorstring,yearstring,titlestring,subtitlestring,editionstring,pubplacestring,publisherstring,referenceframe):
     global count
@@ -571,7 +744,16 @@ def editedbookgen(authorstring,yearstring,titlestring,subtitlestring,editionstri
     else:
         p.add_run(" %s: %s." % (pubplace,publisher)) #add the edition. publishier location: publisher name. to the paragraph
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=9,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
+    
+    file = open('archivedreferences.csv','a')
+    if(edition!=''):
+        referencestring = "Edited Book,%s (%s.) (%s). *%s* %s. %s: %s.\n" % (author,edoreds,year,title,edition,pubplace,publisher)
+    else:
+        referencestring = "Edited Book,%s (%s.) (%s). *%s* %s: %s.\n" % (author,edoreds,year,title,pubplace,publisher)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=9,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
 
 def softwaregen(authorstring,yearstring,titlestring,versionstring,urlstring,accessstring,referenceframe):
     global count
@@ -590,7 +772,13 @@ def softwaregen(authorstring,yearstring,titlestring,versionstring,urlstring,acce
     p.add_run(title).italic = True
     p.add_run(" (%s) [Computer Program]. Available at: %s (Accessed: %s)." % (version,url,access))
     document.save('references.docx')
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=7,column=0,columnspan=2)
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Software,%s (%s). *%s*. (%s) [Computer Program]. Available at: %s (Accessed: %s).\n" % (author,year,title,version,url,access)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=7,column=0,columnspan=2)
 
 def illustrationgen(authorstring,yearstring,titlestring,subtitlestring,pubplacestring,publisherstring,pagestring,urlstring,accessstring,typestring,referenceframe):
     global count
@@ -626,7 +814,16 @@ def illustrationgen(authorstring,yearstring,titlestring,subtitlestring,pubplaces
     else:
         p.add_run(" [%s]. Available at: %s (Accessed: %s)" % (typem,url,access)) #add the edition. publishier location: publisher name. to the paragraph
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=11,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
+    
+    file = open('archivedreferences.csv','a')
+    if(page!=''):
+        referencestring = "Illustration,%s (%s). *%s* [%s]. %s: %s. pp. %s\n" % (author,year,title,typem,pubplace,publisher,page)
+    else:
+        referencestring = "Illustration,%s (%s). *%s* [%s]. Available at: %s (Accessed: %s)\n" % (author,year,title,typem,url,access)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=11,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
 
 def ebookgen(authorstring,yearstring,titlestring,subtitlestring,editionstring,providerstring,urlstring,referenceframe):
     global count
@@ -661,7 +858,16 @@ def ebookgen(authorstring,yearstring,titlestring,subtitlestring,editionstring,pr
     p.add_run(provider).italic = True 
     p.add_run(". [Online]. Available at: %s" % url)
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=10,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
+    
+    file = open('archivedreferences.csv','a')
+    if(edition!=''):
+        referencestring = "Edited Book,%s (%s). *%s* %s. *%s*. [Online]. Available at: %s\n" % (author,year,title,edition,provider,url)
+    else:
+        referencestring = "Edited Book,%s (%s). *%s* *%s*. [Online]. Available at: %s\n" % (author,year,title,provider,url)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=10,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully
 
 def organisationreportgen(authorstring,yearstring,titlestring,pubplacestring,publisherstring,urlstring,accessstring,referenceframe):
     global count
@@ -685,7 +891,16 @@ def organisationreportgen(authorstring,yearstring,titlestring,pubplacestring,pub
     else:
         p.add_run('. Available At: %s (Accessed: %s).' % (url,access))
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=8,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
+    
+    file = open('archivedreferences.csv','a')
+    if(publisher!=''):
+        referencestring = "Report From Organisation,%s (%s). *%s*. %s: %s.\n" % (author,year,title,pubplace,publisher)
+    else:
+        referencestring = "Report From Organisation,%s (%s). *%s*. Available At: %s (Accessed: %s).\n" % (author,year,title,url,access)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=8,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
     
 def selfcitationgen(authorstring,yearstring,titlestring,modulecodestring,moduletitlestring,institutionstring,referenceframe):
     global count
@@ -707,7 +922,13 @@ def selfcitationgen(authorstring,yearstring,titlestring,modulecodestring,modulet
     p.add_run(moduletitle).italic = True
     p.add_run(', %s. Unpublished assignment.' % institution)
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=7,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
+    
+    file = open('archivedreferences.csv','a')
+    referencestring = "Self-Citation,%s (%s). '*%s*'. %s: *%s*, %s. Unpublished assignment\n" % (author,year,title,modulecode,moduletitle,institution)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=7,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
 
 def govpubsgen(authorstring,yearstring,titlestring,subtitlestring,pubplacestring,publisherstring,seriesstring,urlstring,accessstring,referenceframe):
     global count
@@ -746,11 +967,25 @@ def govpubsgen(authorstring,yearstring,titlestring,subtitlestring,pubplacestring
     else:
         pass
     document.save('references.docx') #save the appending to references.docx
-    success = Label(referenceframe,text=('Reference [%s] Successfully Generated' % count)).grid(row=10,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
+    
+    file = open('archivedreferences.csv','a')
+    if(series!='' and url!=''):
+        referencestring = "Government/Corporate Publications,%s (%s). *%s* %s: %s. (%s). Available at: %s (Accessed: %s).\n" % (author,year,title,pubplace,publisher,series,url,access)
+    elif(series!='' and url==''):
+        referencestring = "Government/Corporate Publications,%s (%s). *%s* %s: %s. (%s).\n" % (author,year,title,pubplace,publisher,series)
+    elif(series=='' and url!=''):
+        referencestring = "Government/Corporate Publications,%s (%s). *%s* %s: %s. Available at: %s (Accessed: %s).\n" % (author,year,title,pubplace,publisher,url,access)
+    else:
+        referencestring = "Government/Corporate Publications,%s (%s). *%s* %s: %s.\n" % (author,year,title,pubplace,publisher)
+    file.write(referencestring)
+    file.close()
+    
+    success = Label(referenceframe,text=('Reference [%s] Successfully Generated And Archived' % count)).grid(row=10,column=0,columnspan=2) #create a label at the bottom of the window informing reference [number] added successfully    
 
 #define bookwindow for reference inputs, called when book source is chosen to overwrite the display
 def bookwin():
-    global root, homeframe #make the tkinter root and the frame of the home screen globals
+    global root, homeframe, fromarchive, archivedargs #make the tkinter root and the frame of the home screen globals
+    
     homeframe.destroy() #destroy the homeframe to make the tkinter window blank
     referenceframe = Frame(root) #create a new frame for the references in root
     referenceframe.pack() #pack the new reference frame in the window
@@ -1694,8 +1929,7 @@ def clear(frame,functionreturn):
 
 #define main function for source selection window
 def main():
-    global root,homeframe,reftypevar,countvar #make access to root, homeframe, referency type variable and the count variable global
-    
+    global root,homeframe,reftypevar,countvar,searchframe #make access to root, homeframe, referency type variable and the count variable global
     homeframe = Frame(root) #create a frame called homeframe in root
     homeframe.pack() #pack the frame in the root window
     
@@ -1709,6 +1943,13 @@ def main():
     refgenbutton = Button(homeframe,text='Confirm',command=getchoice).grid(row=0,column=2)
     #define the quitbutton which calls the quitwindow function on buttonpress and closes the program
     quitbutton = Button(homeframe,text='Quit',command=quitwindow).grid(row=0,column=3)
+    
+    searchframe = Frame(root)
+    searchframe.pack()
+    searchlabel = Label(searchframe,text='Search Archived Reference: ').grid(row=1,column=0)
+    searchterms = StringVar()
+    searchentry = Entry(searchframe,textvar=searchterms).grid(row=1,column=1)
+    searchbutton = Button(searchframe,text='Search',command = lambda: searchreferences(searchframe,searchterms)).grid(row=1,column=2)
     #loop root over these defined objects to keep it displayed until something is done to it
     root.mainloop()
 
