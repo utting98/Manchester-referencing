@@ -984,7 +984,7 @@ def govpubsgen(authorstring,yearstring,titlestring,subtitlestring,pubplacestring
 
 #define bookwindow for reference inputs, called when book source is chosen to overwrite the display
 def bookwin():
-    global root, homeframe, fromarchive, archivedargs #make the tkinter root and the frame of the home screen globals
+    global root, homeframe #make the tkinter root and the frame of the home screen globals
     
     homeframe.destroy() #destroy the homeframe to make the tkinter window blank
     referenceframe = Frame(root) #create a new frame for the references in root
