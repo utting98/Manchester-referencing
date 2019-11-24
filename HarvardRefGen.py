@@ -59,188 +59,105 @@ def suffix(d):
 
 #function to search an entered isbn number and autofill the form basedon webscraped data
 def isbnsearch(isbnvar,authorvar,yearvar,titlevar,subtitlevar,editionvar,pubplacevar,publishervar):
-    try: #provide a catch if this fails anywhere
-        a = np.array([]) #create array of links
-        isbn = isbnvar.get() #get the entered isbn string
-        urlstring = ('https://www.google.com/search?tbm=bks&q=' + isbn) #use url of google book search of isbn value
-        #send request to the site also sending a header to be treated as a headed browser
-        response = requests.get(urlstring, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+    try:
+        isbn = isbnvar.get() #get isbn entry
+        url = 'https://isbndb.com/book/' + isbn #specify the url to search
+        #attempt to access the webpage containing information using headers to make site think browser is accessing
+        response = requests.get(url, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
         html1 = response.text #store the source code of the page as a string
         soup = BeautifulSoup(html1, 'html.parser') #parse the string using a html parser
         
-        results = soup.find_all("div",attrs={"class":"r"}) #find all div tags with the class r (this tag stores results of search)
-        for result in results:
-            links = result.find_all('a') #find any instance of a link tag in each result of first search
-            for link in links:
-                a = np.append(a,link.get('href')) #for each tag store the link string
-    
-        for i in range(0,a.size-1): #search the array of links
-            if(isbn in str(a[i])): 
-                linkno = i #if the searched isbn is in the link then store which link to use, used to skip ads
-                break #break loop when found
+        edition = '' #define edition blank by default
+        subtitle = '' #define subtitle blank by default
+        labels = soup.find_all('tr') #find rows of info
+        for i in range(0,len(labels)):
+            #if the row containts the words 'Full Title' split the row to extract title info, also if there is a subtitle split
+            #the title where subtitle begins and update subtitle value, else it will be left blank
+            if('Full Title ' in labels[i].text):
+                splitup = labels[i].text.split('Full Title')
+                title = ' '.join(splitup[1:])
+                title = title.strip()
+                title = title.capitalize()
+                if(':' in title):
+                    newsplit = title.split(':')
+                    title = newsplit[0]
+                    subtitle = newsplit[1]
+                    subtitle = subtitle.strip()
+                    subtitle = subtitle.lower()
+            #if the row containts the words 'Publisher' split the row to extract publisher
+            elif('Publisher ' in labels[i].text):
+                splitup = labels[i].text.split('Publisher ')
+                publisher = ' '.join(splitup[1:])
+                publisher = publisher.strip()
+            #if the row containts the words 'Authors' split the row to extract authors info
+            elif('Authors ' in labels[i].text):
+                splitup = labels[i].text.split('Authors ')
+                string = ' '.join(splitup[1:])
+                string = string.rstrip()
+                splitup = string.strip('\n')
+                splitup = splitup.replace('\n',',')
+                splitup = splitup.strip()
+                authors = splitup.split(',')
+            #if the row containts the words 'Edition' split the row to extract edition info
+            elif('Edition ' in labels[i].text):
+                splitup = labels[i].text.split('Edition ')
+                string = ' '.join(splitup[1:])
+                ending = suffix(int(string))
+                edition = str(string+ending)
+                edition = edition.replace(' ','')
+                edition = edition+' edn'
+                edition = edition.strip()
+            #if the row containts the words 'Publish Date' split the row to extract publish date info
+            elif('Publish Date ' in labels[i].text):
+                splitup = labels[i].text.split('Publish Date ')
+                publishdate = ' '.join(splitup[1:])
+                publishdate = publishdate.strip()
             else:
                 pass
-
-        bookurl = a[linkno] #store new url string as link to the book's page on google books
-        #send request to the site also sending a header to be treated as a headed browser
-        bookresponse = requests.get(bookurl, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
-        html2 = bookresponse.text #store the source code of this page as a string
-        soup = BeautifulSoup(html2, 'html.parser') #parse this string using a html parser
-        
-        try: #check to see if in the about page of the book or on the first page, need about page for metadata
-            results1 = soup.find('a',attrs={'id':'sidebar-atb-link'}) #search for any links stored in a sidebar, should not find any if on about page
-            newlink = results1.get('href') #if instance found of sidebar link get the link of this about page
-            #send request to the site also sending a header to be treated as a headed browser
-            bookresponse2 = requests.get(newlink, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
-            html3 = bookresponse2.text #store the source code of this page as a string
-            soup = BeautifulSoup(html3, 'html.parser') #parse the string using a html parser
-        except:
-            soup = BeautifulSoup(html2, 'html.parser') #if on the about page already parse the original page using html parser
-    
-        results = soup.find_all('td',attrs={'class':'metadata_label'}) #search for all td tags with class metadata_label
-    
-        metadatalabels = np.array([]) #create empty array of metadatalabels
-        metadatavalues = np.array([]) #create empty array of metadatavalues
-        for result in results:
-            metadatalabels = np.append(metadatalabels,result.text) #store the text of all metadatalabels in array
-        metadatalabels = metadatalabels[:-1] #remove final label (export citation label)
-        results = soup.find_all('td',attrs={'class':'metadata_value'}) #search for all td tags with class metadata_value
-        for result in results:
-            datavals = result.find_all('span',attrs={'dir':'ltr'}) #search for all span tags with dir=ltr in these td classes
-            for val in datavals:
-                metadatavalues = np.append(metadatavalues,(val.text)) #store the text of the metadatavalues in array
-        metadatavalues = metadatavalues[:-3] #remove the last three metadatavalues (three options to export citation)            
-        
-        for i in range(0,len(metadatavalues)-1): #loop through metadatavalues
-            if(hasNumbers(metadatavalues[i])==True): #if numbers in element
-                attempt = metadatavalues[i].split(',') #try splitting the element by comma
-                attempt[1] = attempt[1].lstrip() #remove the white space at the start of second element
-                if(len(attempt[1])==4): #if the second element of the attempt is a year
-                    success = i #store the value
-                    break #break loop
+        #if edition is still blank default to first edition
+        if(edition == ''):
+            edition = '1st edn'
+        else:
+            pass
+        #check how many authors there are and format authors list accordingly
+        if(len(authors)==1): #if there is one split their name up and store in format Surname, Initial.
+            split = authors[0].split(' ')
+            final = len(split)
+            surname = split[final-1]
+            firstname = split[0]
+            initial = firstname[0]+'.'
+            formattedauthors = surname+', '+initial
+        elif(len(authors)==2): #if there is two split their names up and store in format Surname, Initial. and Surname, Initial.
+            split = authors
+            author1 = split[0]
+            author2 = split[1]
+            author1 = author1.split(' ')
+            author2 = author2.split(' ')
+            final1 = len(author1)
+            final2 = len(author2)
+            surname1 = author1[final1-1]
+            surname2 = author2[final2-1]
+            firstname1 = author1[0]
+            firstname2 = author2[0]
+            initial1 = firstname1[0]+'.'
+            initial2 = firstname2[0]+'.'
+            formattedauthors = surname1+', '+initial1+' and '+surname2+', '+initial2
+        elif(len(authors)>=3): #if there is three split their names up and store in format Surname, Initial.,... and Surname, Initial.
+            formattedauthors = ''
+            split = authors
+            for i in range(0,len(split)):
+                newauthor = split[i]
+                subsplit = newauthor.split(' ')
+                final = len(subsplit)
+                surname = subsplit[final-1]
+                firstname = subsplit[0]
+                initial = firstname[0]+'.'
+                if(i<len(split)-1):
+                    formattedauthors = formattedauthors+surname+', '+initial+', '
                 else:
-                    pass
-            else:
-                pass
+                    formattedauthors = formattedauthors+'and '+surname+', '+initial
         
-        if('Edition' not in metadatalabels): #if edition is missing
-            metadatalabels = metadatalabels[:-3] #remove the next three metadatalabels
-            metadatavalues = metadatavalues[0:success+1] #replace metadatavalues with values from 0 to the success count
-        else: #if edition is present
-            metadatalabels = metadatalabels[:-2] #remove the next two metadatalabels
-            metadatavalues = metadatavalues[0:success+1] #replace metadatavalues with values from 0 to the success count
-        
-        if(len(metadatalabels)==3): #check if 3 labels, meaning eidtion not found
-            numauthors = int(len(metadatavalues)-len(metadatalabels)+1) #number of authors is the difference between the number of values and number of labels + 1
-            #extra note on above: author is the only one to have multiple values for a single label hence subtitution method works
-            title = str(metadatavalues[0]).lower() #set title variable as the first metadatavalue in lowercase
-            title = title.capitalize() #capitalize first letter of title
-            if(':' in title): #check to see if there is a semicolon in the title (indicating subtitle)
-                title2 = title.split(':') #split the title at the semicolon
-                title = title2[0] #overwrite title as the first element of the split
-                subtitle = str(title2[1]).lower() #store subtitle as second element of split in lowercase
-                subtitle = subtitle.lstrip() #remove the space at the start of the subtitle string
-            else:
-                subtitle='' #if no colon set subtitle as blank
-            authors = metadatavalues[1:numauthors+1] #set authors as the second metadatavalue to the element of number of authors + 1 (as the array started from 0)
-            edn = '' #set edition as blank as it is not listed
-            pubandyear = metadatavalues[numauthors+1] #publisher and year listed in the same value, set this as the element after authors as edition tag is missing
-            
-            try:
-                pubyearsplit = pubandyear.split(',') #attempt to split the publisher and published year by the comma
-                publisher = pubyearsplit[0] #set the publisher as the first element of the split
-                year = pubyearsplit[1].lstrip() #set the published year as the second element of the strip removing space at start
-            except:
-                publisher = pubandyear #if fails set publisher to the original metadatavalue
-                year='' #set year to blank
-        else: #if there is not 6 metadatalabels (empirically means there will be 7)
-            for i in range(0,len(metadatavalues)): #complicated loop process over the number of metadatavalues
-                if(metadatavalues[i]=='illustrated' or hasNumbers(metadatavalues[i])==True): #empirically the edition will always be listed as illustrated or be the first tag to have a number in it and will be the tag after authors
-                    #continuation of above: as a results this value can be used to determine the number of authors
-                    numauthors = int(len(metadatavalues[1:i])) #number of authors is the number of metadatavalues after title and beofre this edition value
-                    title = str(metadatavalues[0]).lower() #set title as the first metadatavalue in lowercase
-                    title = title.capitalize() #capitalize first letter of title string
-                    if(':' in title): #check to see if there is a semicolon in the title (indicating subtitle)
-                        title2 = title.split(':') #split the title at the semicolon
-                        title = title2[0] #overwrite title as the first element of the split
-                        subtitle = str(title2[1]).lower() #store subtitle as second element of split in lowercase
-                        subtitle = subtitle.lstrip() #remove the space at the start of the subtitle string
-                    else:
-                        subtitle='' #if no colon set subtitle as blank
-                    authors = metadatavalues[1:numauthors+1] #set authors as the second metadatavalue to the element of number of authors + 1 (as the array started from 0)
-                    print(authors)
-                    edn = metadatavalues[numauthors+1] #set edition as the metadatavalue following the final author
-                    try: #check a case for if the edition has a number and unrelated text string like 'illustrated'
-                        splitup = edn.split(',') #these options will be comma separated so split at a comma
-                        for i in range(0,len(splitup)): #loop over number of items in split
-                            if(hasNumbers(splitup[i])==True): #check if the element has a number in it
-                                edn = splitup[i] #if yes store edition as the text of that element from the splitup (now a number)
-                                break #break loop to carry on
-                            else:
-                                pass
-                        try:
-                            ending = suffix(int(edn)) #find a suffix for the edition based on the suffix function (e.g. th,nd,rd)
-                            edn = edn+ending+' edn' #store edition as the number plus suffic plus ' edn'
-                        except:
-                            edn = '1st edn' #if edition still came back as illustrated replace it with 1st edition
-                        
-                    except:
-                        pass #if this check fails leave as the scraped value
-                    pubandyear = metadatavalues[numauthors+2] #store variable publisher and published year as metadatavalues from the final author + 2
-                    
-                    try:
-                        pubyearsplit = pubandyear.split(',') #attempt to split publisher and published year string at comma as they are comma separated
-                        publisher = pubyearsplit[0] #set publisher as first element of the split
-                        year = pubyearsplit[1].lstrip() #set published year as the second element of the split and remove space at start of string
-                    except:
-                        publisher = pubandyear #if fails store publisher as the original scraped string
-                        year='' #set year to blank
-                    else:
-                        pass
-                    break #break the loop as all useful values are stored somewhere now
-                else:
-                    pass #if not on edition value then pass
-        
-        newauthor = [] #set blank list for formatted authors
-        
-        if(numauthors==1): #if there is 1 author
-            try:
-                authorslist = authors #store a copy incase of fail
-                author1 = str(authorslist[0]).split(' ') #split the author string by space to get name split in to elements
-                l1 = len(author1) #store number of elements in author name
-                newauthor.append(author1[l1-1]+ ', ' + author1[l1-2][0]+'.') #append newauthor list as '[author surname], [intiial].'
-                formattedauthor = newauthor[0] #set formattedauthor as the first element of newauthor
-            except:
-                formattedauthor = authors #if fails store formnattedauthor as scraped author value
-        elif(numauthors==2): #if there is 2 authors
-            try:
-                authorslist = authors #store a copy incase of fail
-                author1 = str(authorslist[0]).split(' ') #split the first author's name in list by space
-                l1 = len(author1) #store number of elements in first author name
-                author2 = str(authorslist[1]).split(' ') #split the second author's name in list by space
-                l2 = len(author2) #store number of elements in second author name
-                newauthor.append(author1[l1-1]+ ', ' + author1[l1-2][0]+'.') #append newauthor list as '[author 1 surname], [intiial].'
-                newauthor.append(author2[l2-1]+ ', ' + author2[l2-2][0]+'.') #append newauthor list as '[author 2 surname], [intiial].'
-                formattedauthor = newauthor[0]+' and '+newauthor[1] #store formatted author as first element of newauthor ' and ' second element of newauthor
-            except:
-                formattedauthor=authors #if fails store formattedauthor as scraped author value
-        elif(numauthors>=3): #if 3 or more authors
-            try:
-                formattedauthor='' #try setting formattedauthor blank
-                authorslist = authors #store a copy incase of fail
-                alist = [] #create authorlist
-                lt = [] #create author name length list
-                for i in range(0,numauthors): #loop over the number of authors
-                    alist.append(str(authorslist[i]).split(' ')) #append author list with space split author names
-                    lt.append(len(str(authorslist[i]).split(' '))) #append author name length list with number of elements in author name
-                    newauthor.append(alist[i][lt[i]-1]+', '+alist[i][lt[i]-2][0]+'.') #append newauthor with each '[author surname], [intial].'
-                for i in range(0,len(newauthor)-1): #loop over all but the final author
-                    formattedauthor = formattedauthor+str(newauthor[i])+', ' #add each new author to formattedauthor string with a comma and space after
-                formattedauthor = str(formattedauthor).rstrip(', ')+' and '+str(newauthor[len(newauthor)-1]) #to finish the string remove the last ', ' and replace with ' and ' [final newauthor element]
-            except:
-                formattedauthor = authors #if fails store formattedauthor as scraped authos value
-        
-        try:
+        try: #try and find the publisher location from their wikipedia page
             pubsearch = publisher #last unfound value is publisher location not found on about page, store a copy incase of fail
             pubsearch = pubsearch.replace(' ','_') #replace any spaces in publisher string with _
             url='https://en.wikipedia.org/wiki/'+pubsearch #store url string as wikipedia page of publisher
@@ -252,23 +169,36 @@ def isbnsearch(isbnvar,authorvar,yearvar,titlevar,subtitlevar,editionvar,pubplac
             place = results2.text #get the text of the contents of this tag for the publisher location
             newplace = place.split(',') #split publisher location on comma as it will usually give format city,state,country
             pubplace = newplace[0] #store publisher location as city element
-        except:
-            pubplace = '' #if fails store publisher location as blank
-        
+        except: #if wikipedia fails try and extract from google
+            try: #search google and attempt to find publisher location from default search page
+                url = 'https://google.com/search?q='+publisher
+                response = requests.get(url, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+                html5 = response.text #store page source as string
+                soup = BeautifulSoup(html5, 'html.parser') #parse string with html parser
+                tablevals = soup.find_all('a',attrs={'class':'fl'})
+                for i in range(0,len(tablevals)):
+                    if(tablevals[i].text=='Headquarters'):
+                        pubplace = tablevals[i+1].text
+                        break
+                    else:
+                        pass
+            except: #if this fails store publisher location as blank
+                pubplace = '' #if fails store publisher location as blank
+
         try:
             titlevar.set(title) #set the title variable of entry form to the title string
         except:
             pass
         try:
-            yearvar.set(year) #set the year variable of entry form to the year string
+            yearvar.set(publishdate) #set the year variable of entry form to the year string
         except:
             pass
         try:
-            authorvar.set(formattedauthor) #set the author variable of the entry form to the formattedauthor string
+            authorvar.set(formattedauthors) #set the author variable of the entry form to the formattedauthor string
         except:
             pass
         try:
-            editionvar.set(edn) #set the edition variable of the entry field to the edn string
+            editionvar.set(edition) #set the edition variable of the entry field to the edition string
         except:
             pass
         try:
@@ -283,12 +213,254 @@ def isbnsearch(isbnvar,authorvar,yearvar,titlevar,subtitlevar,editionvar,pubplac
             pubplacevar.set(pubplace) #set the publisher location variable of the entry field to the pubplace string
         except:
             pass
-    except: #if isbn search has failed
-        isbnfail = Tk() #open a tkinter window
-        #create text label informing search has failed and to try again, pack in window
-        infolabel = Label(isbnfail,text='ISBN not found. If this is your first time seeing this message please try again.\nTry with and without a hyphen after the first three digits.\nIf the problem persists on numerous attempts then Google Books does not correctly store the metadata so the search will not be able to autofill.').pack()
-        okbutton = Button(isbnfail,text='Ok',command=lambda: isbnfail.destroy()).pack() #create ok button to close window and pack in window
-        isbnfail.mainloop() #keep window displaying
+            
+            
+    except: #if improved method of isbn search fails revert to old method
+        try: #provide a catch if this fails anywhere
+            a = np.array([]) #create array of links
+            isbn = isbnvar.get() #get the entered isbn string
+            urlstring = ('https://www.google.com/search?tbm=bks&q=' + isbn) #use url of google book search of isbn value
+            #send request to the site also sending a header to be treated as a headed browser
+            response = requests.get(urlstring, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+            html1 = response.text #store the source code of the page as a string
+            soup = BeautifulSoup(html1, 'html.parser') #parse the string using a html parser
+            
+            results = soup.find_all("div",attrs={"class":"r"}) #find all div tags with the class r (this tag stores results of search)
+            for result in results:
+                links = result.find_all('a') #find any instance of a link tag in each result of first search
+                for link in links:
+                    a = np.append(a,link.get('href')) #for each tag store the link string
+        
+            for i in range(0,a.size-1): #search the array of links
+                if(isbn in str(a[i])): 
+                    linkno = i #if the searched isbn is in the link then store which link to use, used to skip ads
+                    break #break loop when found
+                else:
+                    pass
+    
+            bookurl = a[linkno] #store new url string as link to the book's page on google books
+            #send request to the site also sending a header to be treated as a headed browser
+            bookresponse = requests.get(bookurl, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+            html2 = bookresponse.text #store the source code of this page as a string
+            soup = BeautifulSoup(html2, 'html.parser') #parse this string using a html parser
+            
+            try: #check to see if in the about page of the book or on the first page, need about page for metadata
+                results1 = soup.find('a',attrs={'id':'sidebar-atb-link'}) #search for any links stored in a sidebar, should not find any if on about page
+                newlink = results1.get('href') #if instance found of sidebar link get the link of this about page
+                #send request to the site also sending a header to be treated as a headed browser
+                bookresponse2 = requests.get(newlink, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+                html3 = bookresponse2.text #store the source code of this page as a string
+                soup = BeautifulSoup(html3, 'html.parser') #parse the string using a html parser
+            except:
+                soup = BeautifulSoup(html2, 'html.parser') #if on the about page already parse the original page using html parser
+        
+            results = soup.find_all('td',attrs={'class':'metadata_label'}) #search for all td tags with class metadata_label
+        
+            metadatalabels = np.array([]) #create empty array of metadatalabels
+            metadatavalues = np.array([]) #create empty array of metadatavalues
+            for result in results:
+                metadatalabels = np.append(metadatalabels,result.text) #store the text of all metadatalabels in array
+            metadatalabels = metadatalabels[:-1] #remove final label (export citation label)
+            results = soup.find_all('td',attrs={'class':'metadata_value'}) #search for all td tags with class metadata_value
+            for result in results:
+                datavals = result.find_all('span',attrs={'dir':'ltr'}) #search for all span tags with dir=ltr in these td classes
+                for val in datavals:
+                    metadatavalues = np.append(metadatavalues,(val.text)) #store the text of the metadatavalues in array
+            metadatavalues = metadatavalues[:-3] #remove the last three metadatavalues (three options to export citation)            
+            
+            for i in range(0,len(metadatavalues)-1): #loop through metadatavalues
+                if(hasNumbers(metadatavalues[i])==True): #if numbers in element
+                    attempt = metadatavalues[i].split(',') #try splitting the element by comma
+                    attempt[1] = attempt[1].lstrip() #remove the white space at the start of second element
+                    if(len(attempt[1])==4): #if the second element of the attempt is a year
+                        success = i #store the value
+                        break #break loop
+                    else:
+                        pass
+                else:
+                    pass
+            
+            if('Edition' not in metadatalabels): #if edition is missing
+                metadatalabels = metadatalabels[:-3] #remove the next three metadatalabels
+                metadatavalues = metadatavalues[0:success+1] #replace metadatavalues with values from 0 to the success count
+            else: #if edition is present
+                metadatalabels = metadatalabels[:-2] #remove the next two metadatalabels
+                metadatavalues = metadatavalues[0:success+1] #replace metadatavalues with values from 0 to the success count
+            
+            if(len(metadatalabels)==3): #check if 3 labels, meaning eidtion not found
+                numauthors = int(len(metadatavalues)-len(metadatalabels)+1) #number of authors is the difference between the number of values and number of labels + 1
+                #extra note on above: author is the only one to have multiple values for a single label hence subtitution method works
+                title = str(metadatavalues[0]).lower() #set title variable as the first metadatavalue in lowercase
+                title = title.capitalize() #capitalize first letter of title
+                if(':' in title): #check to see if there is a semicolon in the title (indicating subtitle)
+                    title2 = title.split(':') #split the title at the semicolon
+                    title = title2[0] #overwrite title as the first element of the split
+                    subtitle = str(title2[1]).lower() #store subtitle as second element of split in lowercase
+                    subtitle = subtitle.lstrip() #remove the space at the start of the subtitle string
+                else:
+                    subtitle='' #if no colon set subtitle as blank
+                authors = metadatavalues[1:numauthors+1] #set authors as the second metadatavalue to the element of number of authors + 1 (as the array started from 0)
+                edn = '' #set edition as blank as it is not listed
+                pubandyear = metadatavalues[numauthors+1] #publisher and year listed in the same value, set this as the element after authors as edition tag is missing
+                
+                try:
+                    pubyearsplit = pubandyear.split(',') #attempt to split the publisher and published year by the comma
+                    publisher = pubyearsplit[0] #set the publisher as the first element of the split
+                    year = pubyearsplit[1].lstrip() #set the published year as the second element of the strip removing space at start
+                except:
+                    publisher = pubandyear #if fails set publisher to the original metadatavalue
+                    year='' #set year to blank
+            else: #if there is not 6 metadatalabels (empirically means there will be 7)
+                for i in range(0,len(metadatavalues)): #complicated loop process over the number of metadatavalues
+                    if(metadatavalues[i]=='illustrated' or hasNumbers(metadatavalues[i])==True): #empirically the edition will always be listed as illustrated or be the first tag to have a number in it and will be the tag after authors
+                        #continuation of above: as a results this value can be used to determine the number of authors
+                        numauthors = int(len(metadatavalues[1:i])) #number of authors is the number of metadatavalues after title and beofre this edition value
+                        title = str(metadatavalues[0]).lower() #set title as the first metadatavalue in lowercase
+                        title = title.capitalize() #capitalize first letter of title string
+                        if(':' in title): #check to see if there is a semicolon in the title (indicating subtitle)
+                            title2 = title.split(':') #split the title at the semicolon
+                            title = title2[0] #overwrite title as the first element of the split
+                            subtitle = str(title2[1]).lower() #store subtitle as second element of split in lowercase
+                            subtitle = subtitle.lstrip() #remove the space at the start of the subtitle string
+                        else:
+                            subtitle='' #if no colon set subtitle as blank
+                        authors = metadatavalues[1:numauthors+1] #set authors as the second metadatavalue to the element of number of authors + 1 (as the array started from 0)
+                        print(authors)
+                        edn = metadatavalues[numauthors+1] #set edition as the metadatavalue following the final author
+                        try: #check a case for if the edition has a number and unrelated text string like 'illustrated'
+                            splitup = edn.split(',') #these options will be comma separated so split at a comma
+                            for i in range(0,len(splitup)): #loop over number of items in split
+                                if(hasNumbers(splitup[i])==True): #check if the element has a number in it
+                                    edn = splitup[i] #if yes store edition as the text of that element from the splitup (now a number)
+                                    break #break loop to carry on
+                                else:
+                                    pass
+                            try:
+                                ending = suffix(int(edn)) #find a suffix for the edition based on the suffix function (e.g. th,nd,rd)
+                                edn = edn+ending+' edn' #store edition as the number plus suffic plus ' edn'
+                            except:
+                                edn = '1st edn' #if edition still came back as illustrated replace it with 1st edition
+                            
+                        except:
+                            pass #if this check fails leave as the scraped value
+                        pubandyear = metadatavalues[numauthors+2] #store variable publisher and published year as metadatavalues from the final author + 2
+                        
+                        try:
+                            pubyearsplit = pubandyear.split(',') #attempt to split publisher and published year string at comma as they are comma separated
+                            publisher = pubyearsplit[0] #set publisher as first element of the split
+                            year = pubyearsplit[1].lstrip() #set published year as the second element of the split and remove space at start of string
+                        except:
+                            publisher = pubandyear #if fails store publisher as the original scraped string
+                            year='' #set year to blank
+                        else:
+                            pass
+                        break #break the loop as all useful values are stored somewhere now
+                    else:
+                        pass #if not on edition value then pass
+            
+            newauthor = [] #set blank list for formatted authors
+            
+            if(numauthors==1): #if there is 1 author
+                try:
+                    authorslist = authors #store a copy incase of fail
+                    author1 = str(authorslist[0]).split(' ') #split the author string by space to get name split in to elements
+                    l1 = len(author1) #store number of elements in author name
+                    newauthor.append(author1[l1-1]+ ', ' + author1[l1-2][0]+'.') #append newauthor list as '[author surname], [intiial].'
+                    formattedauthor = newauthor[0] #set formattedauthor as the first element of newauthor
+                except:
+                    formattedauthor = authors #if fails store formnattedauthor as scraped author value
+            elif(numauthors==2): #if there is 2 authors
+                try:
+                    authorslist = authors #store a copy incase of fail
+                    author1 = str(authorslist[0]).split(' ') #split the first author's name in list by space
+                    l1 = len(author1) #store number of elements in first author name
+                    author2 = str(authorslist[1]).split(' ') #split the second author's name in list by space
+                    l2 = len(author2) #store number of elements in second author name
+                    newauthor.append(author1[l1-1]+ ', ' + author1[l1-2][0]+'.') #append newauthor list as '[author 1 surname], [intiial].'
+                    newauthor.append(author2[l2-1]+ ', ' + author2[l2-2][0]+'.') #append newauthor list as '[author 2 surname], [intiial].'
+                    formattedauthor = newauthor[0]+' and '+newauthor[1] #store formatted author as first element of newauthor ' and ' second element of newauthor
+                except:
+                    formattedauthor=authors #if fails store formattedauthor as scraped author value
+            elif(numauthors>=3): #if 3 or more authors
+                try:
+                    formattedauthor='' #try setting formattedauthor blank
+                    authorslist = authors #store a copy incase of fail
+                    alist = [] #create authorlist
+                    lt = [] #create author name length list
+                    for i in range(0,numauthors): #loop over the number of authors
+                        alist.append(str(authorslist[i]).split(' ')) #append author list with space split author names
+                        lt.append(len(str(authorslist[i]).split(' '))) #append author name length list with number of elements in author name
+                        newauthor.append(alist[i][lt[i]-1]+', '+alist[i][lt[i]-2][0]+'.') #append newauthor with each '[author surname], [intial].'
+                    for i in range(0,len(newauthor)-1): #loop over all but the final author
+                        formattedauthor = formattedauthor+str(newauthor[i])+', ' #add each new author to formattedauthor string with a comma and space after
+                    formattedauthor = str(formattedauthor).rstrip(', ')+' and '+str(newauthor[len(newauthor)-1]) #to finish the string remove the last ', ' and replace with ' and ' [final newauthor element]
+                except:
+                    formattedauthor = authors #if fails store formattedauthor as scraped authos value
+            
+            try:
+                pubsearch = publisher #last unfound value is publisher location not found on about page, store a copy incase of fail
+                pubsearch = pubsearch.replace(' ','_') #replace any spaces in publisher string with _
+                url='https://en.wikipedia.org/wiki/'+pubsearch #store url string as wikipedia page of publisher
+                #send request to the site also sending a header to be treated as a headed browser
+                response = requests.get(url, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+                html4 = response.text #store page source as string
+                soup = BeautifulSoup(html4, 'html.parser') #parse string with html parser
+                results2 = soup.find("td",attrs={"class":"label"}) #find all instances of td tag with the class label
+                place = results2.text #get the text of the contents of this tag for the publisher location
+                newplace = place.split(',') #split publisher location on comma as it will usually give format city,state,country
+                pubplace = newplace[0] #store publisher location as city element
+            except:
+                try:
+                    url = 'https://google.com/search?q='+publisher
+                    response = requests.get(url, headers={'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'})
+                    #print('here')
+                    html5 = response.text #store page source as string
+                    soup = BeautifulSoup(html5, 'html.parser') #parse string with html parser
+                    tablevals = soup.find_all('a',attrs={'class':'fl'})
+                    for i in range(0,len(tablevals)):
+                        #print(tablevals[i].text)
+                        if(tablevals[i].text=='Headquarters'):
+                            pubplace = tablevals[i+1].text
+                            break
+                        else:
+                            pass
+                except:
+                    pubplace = '' #if fails store publisher location as blank
+            
+            try:
+                titlevar.set(title) #set the title variable of entry form to the title string
+            except:
+                pass
+            try:
+                yearvar.set(year) #set the year variable of entry form to the year string
+            except:
+                pass
+            try:
+                authorvar.set(formattedauthor) #set the author variable of the entry form to the formattedauthor string
+            except:
+                pass
+            try:
+                editionvar.set(edn) #set the edition variable of the entry field to the edn string
+            except:
+                pass
+            try:
+                publishervar.set(publisher) #set the publisher variable of the entry field to the publisher string
+            except:
+                pass
+            try:
+                subtitlevar.set(subtitle) #set the subtitle variable of the entry field to the subtitle string
+            except:
+                pass
+            try:
+                pubplacevar.set(pubplace) #set the publisher location variable of the entry field to the pubplace string
+            except:
+                pass
+        except: #if isbn search has failed
+            isbnfail = Tk() #open a tkinter window
+            #create text label informing search has failed and to try again, pack in window
+            infolabel = Label(isbnfail,text='ISBN not found. If this is your first time seeing this message please try again.\nTry with and without a hyphen after the first three digits.\nEnsure that you try both the ISBN-13 and ISBN-10 code for the book as one usually works if the other does not.\nIf the problem persists through both this ISBN is not compatible with the search and will have to be entered manually.').pack()
+            okbutton = Button(isbnfail,text='Ok',command=lambda: isbnfail.destroy()).pack() #create ok button to close window and pack in window
+            isbnfail.mainloop() #keep window displaying
 
 def searchreferences(referenceframe,searchterms):
     global archivevar
@@ -1043,7 +1215,7 @@ def bookwin():
     publisherentry = Entry(referenceframe,textvariable=publisherstring).grid(row=7,column=1)
     
     #generate label to tell to input isbn and show example and show in eighth row and first column of grid
-    isbnlabel = Label(referenceframe,text='ISBN-13 Search (e.g. 9780198509509)').grid(row=8,column=0)
+    isbnlabel = Label(referenceframe,text='ISBN-10/13 Search (e.g. 9780198509509)').grid(row=8,column=0)
     #define the string variable the entry will be stored to
     isbnstring = StringVar()
     #define the entry window for the text and set it in the eighth row and second column of the grid
@@ -1349,7 +1521,7 @@ def editbookchapterwin():
     pagesstring = StringVar()
     pagesentry = Entry(referenceframe,textvariable=pagesstring).grid(row=9,column=1)
     
-    isbnlabel = Label(referenceframe,text='ISBN-13 Search (e.g. 9780198509509)').grid(row=10,column=0)
+    isbnlabel = Label(referenceframe,text='ISBN-10/13 Search (e.g. 9780198509509)').grid(row=10,column=0)
     isbnstring = StringVar()
     isbnentry = Entry(referenceframe,textvariable=isbnstring).grid(row=10,column=1)
     isbnbutton = Button(referenceframe,text='Search',command=lambda: isbnsearch(isbnstring,authorstring,yearstring,titlestring,subtitlestring,0,pubplacestring,publisherstring)).grid(row=10,column=2)
@@ -1397,7 +1569,7 @@ def editedbookwin():
     publisherstring = StringVar()
     publisherentry = Entry(referenceframe,textvariable=publisherstring).grid(row=7,column=1)
     
-    isbnlabel = Label(referenceframe,text='ISBN-13 Search (e.g. 9780198509509)').grid(row=8,column=0)
+    isbnlabel = Label(referenceframe,text='ISBN-10/13 Search (e.g. 9780198509509)').grid(row=8,column=0)
     isbnstring = StringVar()
     isbnentry = Entry(referenceframe,textvariable=isbnstring).grid(row=8,column=1)
     isbnbutton = Button(referenceframe,text='Search',command=lambda: isbnsearch(isbnstring,authorstring,yearstring,titlestring,subtitlestring,0,pubplacestring,publisherstring)).grid(row=8,column=2)
